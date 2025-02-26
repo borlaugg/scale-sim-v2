@@ -9,20 +9,32 @@ class scale_config:
         # Anand: ISSUE #2. Patch
         self.use_user_bandwidth = False
 
-        self.array_rows = 4
-        self.array_cols = 4
-        self.ifmap_sz_kb = 256
-        self.filter_sz_kb = 256
-        self.ofmap_sz_kb = 128
-        self.df = 'ws'
-        self.ifmap_offset = 0
-        self.filter_offset = 10000000
-        self.ofmap_offset = 20000000
+        self.array_rows = 10
+        self.array_cols = 10
+
+        # self.array_rows = 4
+        # self.array_cols = 4
+        # self.ifmap_sz_kb = 256
+        # self.filter_sz_kb = 256
+        # self.ofmap_sz_kb = 128
+        # self.df = 'ws'
+        # self.ifmap_offset = 0
+        # self.filter_offset = 10000000
+        # self.ofmap_offset = 20000000
+        self.A_sz_kb = 1024
+        self.b_sz_kb = 256
+        self.x_sz_kb = 256
+        self.xin_sz_kb = 256
+        self.df = 'solver'
+        self.A_offset = 0
+        self.b_offset = 10000000
+        self.xin_offset = 20000000
+        self.x_offset = 30000000
         self.topofile = ""
         self.bandwidths = []
         self.valid_conf_flag = False
 
-        self.valid_df_list = ['os', 'ws', 'is']
+        self.valid_df_list = ['os', 'ws', 'is','solver']
 
     #
     def read_conf_file(self, conf_file_in):
@@ -48,15 +60,18 @@ class scale_config:
             return
 
         section = 'architecture_presets'
-        self.array_rows = int(config.get(section, 'ArrayHeight'))
-        self.array_cols = int(config.get(section, 'ArrayWidth'))
-        self.ifmap_sz_kb = int(config.get(section, 'ifmapsramszkB'))
-        self.filter_sz_kb = int(config.get(section, 'filtersramszkB'))
-        self.ofmap_sz_kb = int(config.get(section, 'ofmapsramszkB'))
-        self.ifmap_offset = int(config.get(section, 'IfmapOffset'))
-        self.filter_offset = int(config.get(section, 'FilterOffset'))
-        self.ofmap_offset = int(config.get(section, 'OfmapOffset'))
-        self.df = config.get(section, 'Dataflow')
+        self.array_rows = 10
+        self.array_cols = 10
+        
+        self.A_sz_kb = 1024
+        self.b_sz_kb = 256
+        self.x_sz_kb = 256
+        self.xin_sz_kb = 256
+        self.df = 'solver'
+        self.A_offset = 0
+        self.b_offset = 10000000
+        self.xin_offset = 20000000
+        self.x_offset = 30000000
 
         # Anand: ISSUE #2. Patch
         if self.use_user_bandwidth:
@@ -78,8 +93,8 @@ class scale_config:
                   "Incompatible number of elements in the list")
 
         self.run_name = conf_list[0]
-        self.array_rows = int(conf_list[1])
-        self.array_cols = int(conf_list[2])
+        # self.array_rows = int(conf_list[1])
+        # self.array_cols = int(conf_list[2])
         self.ifmap_sz_kb = int(conf_list[3])
         self.filter_sz_kb = int(conf_list[4])
         self.ofmap_sz_kb = int(conf_list[5])
@@ -198,13 +213,15 @@ class scale_config:
         out_list.append(str(self.array_rows))
         out_list.append(str(self.array_cols))
 
-        out_list.append(str(self.ifmap_sz_kb))
-        out_list.append(str(self.filter_sz_kb))
-        out_list.append(str(self.ofmap_sz_kb))
+        out_list.append(str(self.A_sz_kb))
+        out_list.append(str(self.b_sz_kb))
+        out_list.append(str(self.x_sz_kb))
+        out_list.append(str(self.xin_sz_kb))
 
-        out_list.append(str(self.ifmap_offset))
-        out_list.append(str(self.filter_offset))
-        out_list.append(str(self.ofmap_offset))
+        out_list.append(str(self.A_offset))
+        out_list.append(str(self.b_offset))
+        out_list.append(str(self.x_offset))
+        out_list.append(str(self.xin_offset))
 
         out_list.append(str(self.df))
         out_list.append(str(self.topofile))
@@ -250,11 +267,11 @@ class scale_config:
             message += 'Config is not valid. Not returning any values'
             return
 
-        return self.ifmap_sz_kb, self.filter_sz_kb, self.ofmap_sz_kb
+        return self.A_sz_kb, self.b_sz_kb, self.x_sz_kb, self.xin_sz_kb
 
     def get_offsets(self):
         if self.valid_conf_flag:
-            return self.ifmap_offset, self.filter_offset, self.ofmap_offset
+            return self.A_offset, self.b_offset, self.x_offset, self.xin_offset
 
     def get_bandwidths_as_string(self):
         if self.valid_conf_flag:

@@ -1,7 +1,8 @@
 import os
-from scalesim.scale_config import scale_config
+from scale_config import scale_config
 from scalesim.topology_utils import topologies
-from scalesim.simulator import simulator as sim
+from solver_utils import solver
+from simulator import simulator as sim
 
 
 class scalesim:
@@ -14,11 +15,12 @@ class scalesim:
 
         # Data structures
         self.config = scale_config()
-        self.topo = topologies()
+        # self.topo = topologies()
+        self.solver = solver()
 
         # File paths
         self.config_file = ''
-        self.topology_file = ''
+        # self.topology_file = ''
 
         # Member objects
         #self.runner = r.run_nets()
@@ -31,8 +33,8 @@ class scalesim:
         self.run_done_flag = False
         self.logs_generated_flag = False
 
-        self.set_params(config_filename=config, topology_filename=topology)
-
+        # self.set_params(config_filename=config, topology_filename=topology)
+        self.set_solverParams(config_filename=config)
     #
     def set_params(self,
                    config_filename='',
@@ -72,14 +74,36 @@ class scalesim:
         #self.config.scale_memory_maps(num_layers=num_layers)
 
     #
+    def set_solverParams(self,
+                   config_filename=''):
+
+        if not os.path.exists(config_filename):
+            print("ERROR: scalesim.scale.py: Config file not found") 
+            print("Input file:" + config_filename)
+            print('Exiting')
+            exit()
+        else: 
+            self.config_file = config_filename
+
+        # Parse config first
+        self.config.read_conf_file(self.config_file)
+
+
+    #
     def run_scale(self, top_path='.'):
 
-        self.top_path = top_path
+        # self.top_path = top_path
         save_trace = not self.save_space
-        self.runner.set_params(
+        # self.runner.set_params(
+        #     config_obj=self.config,
+        #     topo_obj=self.topo,
+        #     top_path=self.top_path,
+        #     verbosity=self.verbose_flag,
+        #     save_trace=save_trace
+        # )
+        self.runner.set_solverParams(
             config_obj=self.config,
-            topo_obj=self.topo,
-            top_path=self.top_path,
+            solver_obj=self.solver,
             verbosity=self.verbose_flag,
             save_trace=save_trace
         )
@@ -113,13 +137,15 @@ class scalesim:
 
     #
     def print_run_configs(self):
-        df_string = "Output Stationary"
+        df_string = "Solver"
         df = self.config.get_dataflow()
 
         if df == 'ws':
             df_string = "Weight Stationary"
         elif df == 'is':
             df_string = "Input Stationary"
+        elif df == 'solver':
+            df_string = "Solver"
 
         print("====================================================")
         print("******************* SCALE SIM **********************")
@@ -128,10 +154,11 @@ class scalesim:
         arr_h, arr_w = self.config.get_array_dims()
         print("Array Size: \t" + str(arr_h) + "x" + str(arr_w))
 
-        ifmap_kb, filter_kb, ofmap_kb = self.config.get_mem_sizes()
-        print("SRAM IFMAP (kB): \t" + str(ifmap_kb))
-        print("SRAM Filter (kB): \t" + str(filter_kb))
-        print("SRAM OFMAP (kB): \t" + str(ofmap_kb))
+        A_kb, b_kb, x_kb, xin_kb = self.config.get_mem_sizes()
+        print("SRAM A (kB): \t" + str(A_kb))
+        print("SRAM b (kB): \t" + str(b_kb))
+        print("SRAM x_in (kB): \t" + str(xin_kb))
+        print("SRAM x (kB): \t" + str(x_kb))
         print("Dataflow: \t" + df_string)
         print("CSV file path: \t" + self.config.get_topology_path())
 

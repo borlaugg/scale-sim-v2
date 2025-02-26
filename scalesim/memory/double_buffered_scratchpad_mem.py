@@ -1,9 +1,10 @@
 import time
+import math
 import numpy as np
 from tqdm import tqdm
 
 from scalesim.memory.read_buffer import read_buffer as rdbuf
-from scalesim.memory.read_buffer_estimate_bw import ReadBufferEstimateBw as rdbuf_est
+from memory.read_buffer_estimate_bw import ReadBufferEstimateBw as rdbuf_est
 from scalesim.memory.read_port import read_port as rdport
 from scalesim.memory.write_buffer import write_buffer as wrbuf
 from scalesim.memory.write_port import write_port as wrport
@@ -11,45 +12,54 @@ from scalesim.memory.write_port import write_port as wrport
 
 class double_buffered_scratchpad:
     def __init__(self):
-        self.ifmap_buf = rdbuf()
-        self.filter_buf = rdbuf()
-        self.ofmap_buf =wrbuf()
+        self.A_buf = rdbuf()
+        self.b_buf = rdbuf()
+        self.x_buf = wrbuf()
+        self.xin_buf = rdbuf()
 
-        self.ifmap_port = rdport()
-        self.filter_port = rdport()
-        self.ofmap_port = wrport()
+        self.A_port = rdport()
+        self.b_port = rdport()
+        self.x_port = wrport()
+        self.xin_port = rdport()
 
         self.verbose = True
 
-        self.ifmap_trace_matrix = np.zeros((1,1), dtype=int)
-        self.filter_trace_matrix = np.zeros((1,1), dtype=int)
-        self.ofmap_trace_matrix = np.zeros((1,1), dtype=int)
+        self.A_trace_matrix = np.zeros((1,1), dtype=int)
+        self.b_trace_matrix = np.zeros((1,1), dtype=int)
+        self.x_trace_matrix = np.zeros((1,1), dtype=int)
+        self.xin_trace_matrix = np.zeros((1,1), dtype=int)
 
         # Metrics to gather for generating run reports
         self.total_cycles = 0
         self.compute_cycles = 0
         self.stall_cycles = 0
 
-        self.avg_ifmap_dram_bw = 0
-        self.avg_filter_dram_bw = 0
-        self.avg_ofmap_dram_bw = 0
+        self.avg_A_dram_bw = 0
+        self.avg_b_dram_bw = 0
+        self.avg_x_dram_bw = 0
+        self.avg_xin_dram_bw = 0
 
-        self.ifmap_sram_start_cycle = 0
-        self.ifmap_sram_stop_cycle = 0
-        self.filter_sram_start_cycle = 0
-        self.filter_sram_stop_cycle = 0
-        self.ofmap_sram_start_cycle = 0
-        self.ofmap_sram_stop_cycle = 0
+        self.A_sram_start_cycle = 0
+        self.A_sram_stop_cycle = 0
+        self.b_sram_start_cycle = 0
+        self.b_sram_stop_cycle = 0
+        self.x_sram_start_cycle = 0
+        self.x_sram_stop_cycle = 0
+        self.xin_sram_start_cycle = 0
+        self.xin_sram_stop_cycle = 0
 
-        self.ifmap_dram_start_cycle = 0
-        self.ifmap_dram_stop_cycle = 0
-        self.ifmap_dram_reads = 0
-        self.filter_dram_start_cycle = 0
-        self.filter_dram_stop_cycle = 0
-        self.filter_dram_reads = 0
-        self.ofmap_dram_start_cycle = 0
-        self.ofmap_dram_stop_cycle = 0
-        self.ofmap_dram_writes = 0
+        self.A_dram_start_cycle = 0
+        self.A_dram_stop_cycle = 0
+        self.A_dram_reads = 0
+        self.b_dram_start_cycle = 0
+        self.b_dram_stop_cycle = 0
+        self.b_dram_reads = 0
+        self.x_dram_start_cycle = 0
+        self.x_dram_stop_cycle = 0
+        self.x_dram_writes = 0
+        self.xin_dram_start_cycle = 0
+        self.xin_dram_stop_cycle = 0
+        self.xin_dram_reads = 0
 
         self.estimate_bandwidth_mode = False,
         self.traces_valid = False
@@ -60,48 +70,62 @@ class double_buffered_scratchpad:
                    verbose=True,
                    estimate_bandwidth_mode=False,
                    word_size=1,
-                   ifmap_buf_size_bytes=2, filter_buf_size_bytes=2, ofmap_buf_size_bytes=2,
+                   A_buf_size_bytes=2, b_buf_size_bytes=2, x_buf_size_bytes=2, xin_buf_size_bytes=2,
                    rd_buf_active_frac=0.5, wr_buf_active_frac=0.5,
-                   ifmap_backing_buf_bw=1, filter_backing_buf_bw=1, ofmap_backing_buf_bw=1):
+                   A_backing_buf_bw=1, b_backing_buf_bw=1, x_backing_buf_bw=1, xin_backing_buf_bw=1):
 
         self.estimate_bandwidth_mode = estimate_bandwidth_mode
 
         if self.estimate_bandwidth_mode:
-            self.ifmap_buf = rdbuf_est()
-            self.filter_buf = rdbuf_est()
+            self.A_buf = rdbuf_est()
+            self.b_buf = rdbuf_est()
+            self.xin_buf = rdbuf_est()
 
-            self.ifmap_buf.set_params(backing_buf_obj=self.ifmap_port,
-                                      total_size_bytes=ifmap_buf_size_bytes,
+            self.A_buf.set_params(backing_buf_obj=self.A_port,
+                                      total_size_bytes=A_buf_size_bytes,
                                       word_size=word_size,
                                       active_buf_frac=rd_buf_active_frac,
-                                      backing_buf_default_bw=ifmap_backing_buf_bw)
+                                      backing_buf_default_bw=A_backing_buf_bw)
 
-            self.filter_buf.set_params(backing_buf_obj=self.filter_port,
-                                       total_size_bytes=filter_buf_size_bytes,
+            self.b_buf.set_params(backing_buf_obj=self.b_port,
+                                       total_size_bytes=b_buf_size_bytes,
                                        word_size=word_size,
                                        active_buf_frac=rd_buf_active_frac,
-                                       backing_buf_default_bw=filter_backing_buf_bw)
+                                       backing_buf_default_bw=b_backing_buf_bw)
+
+            self.xin_buf.set_params(backing_buf_obj=self.xin_port,
+                                       total_size_bytes=xin_buf_size_bytes,
+                                       word_size=word_size,
+                                       active_buf_frac=rd_buf_active_frac,
+                                       backing_buf_default_bw=xin_backing_buf_bw)
         else:
-            self.ifmap_buf = rdbuf()
-            self.filter_buf = rdbuf()
+            self.A_buf = rdbuf()
+            self.b_buf = rdbuf()
+            self.xin_buf = rdbuf()
 
-            self.ifmap_buf.set_params(backing_buf_obj=self.ifmap_port,
-                                      total_size_bytes=ifmap_buf_size_bytes,
+            self.A_buf.set_params(backing_buf_obj=self.A_port,
+                                      total_size_bytes=A_buf_size_bytes,
                                       word_size=word_size,
                                       active_buf_frac=rd_buf_active_frac,
-                                      backing_buf_bw=ifmap_backing_buf_bw)
+                                      backing_buf_bw=A_backing_buf_bw)
 
-            self.filter_buf.set_params(backing_buf_obj=self.filter_port,
-                                       total_size_bytes=filter_buf_size_bytes,
+            self.b_buf.set_params(backing_buf_obj=self.b_port,
+                                       total_size_bytes=b_buf_size_bytes,
                                        word_size=word_size,
                                        active_buf_frac=rd_buf_active_frac,
-                                       backing_buf_bw=filter_backing_buf_bw)
+                                       backing_buf_bw=b_backing_buf_bw)
 
-        self.ofmap_buf.set_params(backing_buf_obj=self.ofmap_port,
-                                  total_size_bytes=ofmap_buf_size_bytes,
+            self.xin_buf.set_params(backing_buf_obj=self.xin_port,
+                                       total_size_bytes=xin_buf_size_bytes,
+                                       word_size=word_size,
+                                       active_buf_frac=rd_buf_active_frac,
+                                       backing_buf_bw=xin_backing_buf_bw)
+
+        self.x_buf.set_params(backing_buf_obj=self.x_port,
+                                  total_size_bytes=x_buf_size_bytes,
                                   word_size=word_size,
                                   active_buf_frac=wr_buf_active_frac,
-                                  backing_buf_bw=ofmap_backing_buf_bw)
+                                  backing_buf_bw=x_backing_buf_bw)
 
         self.verbose = verbose
 
@@ -109,104 +133,133 @@ class double_buffered_scratchpad:
 
     #
     def set_read_buf_prefetch_matrices(self,
-                                       ifmap_prefetch_mat=np.zeros((1,1)),
-                                       filter_prefetch_mat=np.zeros((1,1))
+                                       A_prefetch_mat=np.zeros((1,1)),
+                                       b_prefetch_mat=np.zeros((1,1)),
+                                       xin_prefetch_mat=np.zeros((1,1))
                                        ):
 
-        self.ifmap_buf.set_fetch_matrix(ifmap_prefetch_mat)
-        self.filter_buf.set_fetch_matrix(filter_prefetch_mat)
+        self.A_buf.set_fetch_matrix(A_prefetch_mat)
+        self.b_buf.set_fetch_matrix(b_prefetch_mat)
+        self.xin_buf.set_fetch_matrix(xin_prefetch_mat)
 
     #
     def reset_buffer_states(self):
 
-        self.ifmap_buf.reset()
-        self.filter_buf.reset()
-        self.ofmap_buf.reset()
+        self.A_buf.reset()
+        self.b_buf.reset()
+        self.x_buf.reset()
+        self.xin_buf.reset()
 
     # The following are just shell methods for users to control each mem individually
-    def service_ifmap_reads(self,
+    def service_xin_reads(self,
                             incoming_requests_arr_np,   # 2D array with the requests
                             incoming_cycles_arr):
-        out_cycles_arr_np = self.ifmap_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+        out_cycles_arr_np = self.x_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
 
         return out_cycles_arr_np
 
     #
-    def service_filter_reads(self,
+    def service_A_reads(self,
                             incoming_requests_arr_np,   # 2D array with the requests
                             incoming_cycles_arr):
-        out_cycles_arr_np = self.filter_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+        out_cycles_arr_np = self.A_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
 
         return out_cycles_arr_np
 
     #
-    def service_ofmap_writes(self,
+    def service_b_reads(self,
+                            incoming_requests_arr_np,   # 2D array with the requests
+                            incoming_cycles_arr):
+        out_cycles_arr_np = self.b_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+
+        return out_cycles_arr_np
+
+    #
+    def service_x_writes(self,
                              incoming_requests_arr_np,  # 2D array with the requests
                              incoming_cycles_arr):
 
-        out_cycles_arr_np = self.ofmap_buf.service_writes(incoming_requests_arr_np, incoming_cycles_arr)
+        out_cycles_arr_np = self.x_buf.service_writes(incoming_requests_arr_np, incoming_cycles_arr)
 
         return out_cycles_arr_np
 
     #
-    def service_memory_requests(self, ifmap_demand_mat, filter_demand_mat, ofmap_demand_mat):
+    def service_memory_requests(self, A_demand_mat, b_demand_mat, x_demand_mat, xin_demand_mat):
         assert self.params_valid_flag, 'Memories not initialized yet'
 
-        ofmap_lines = ofmap_demand_mat.shape[0]
+        x_lines = x_demand_mat.shape[0]
+        PEs = x_demand_mat.shape[1]
+        step = math.sqrt(x_lines)
 
         self.total_cycles = 0
         self.stall_cycles = 0
 
-        ifmap_hit_latency = self.ifmap_buf.get_hit_latency()
-        filter_hit_latency = self.filter_buf.get_hit_latency()
+        A_hit_latency = self.A_buf.get_hit_latency()
+        b_hit_latency = self.b_buf.get_hit_latency()
+        xin_hit_latency = self.xin_buf.get_hit_latency()
 
-        ifmap_serviced_cycles = []
-        filter_serviced_cycles = []
-        ofmap_serviced_cycles = []
+        A_serviced_cycles = []
+        b_serviced_cycles = []
+        x_serviced_cycles = []
+        xin_serviced_cycles = []
 
         pbar_disable = not self.verbose
-        for i in tqdm(range(ofmap_lines), disable=pbar_disable):
+        for i in tqdm(range(x_lines), disable=pbar_disable):
 
             cycle_arr = np.zeros((1,1)) + i + self.stall_cycles
 
-            ifmap_demand_line = ifmap_demand_mat[i, :].reshape((1,ifmap_demand_mat.shape[1]))
-            ifmap_cycle_out = self.ifmap_buf.service_reads(incoming_requests_arr_np=ifmap_demand_line,
+            A_demand_line = np.reshape(A_demand_mat[i],(1,PEs*PEs))
+            A_cycle_out = self.A_buf.service_reads(incoming_requests_arr_np=A_demand_line,
                                                             incoming_cycles_arr=cycle_arr)
-            ifmap_serviced_cycles += [ifmap_cycle_out[0]]
-            ifmap_stalls = ifmap_cycle_out[0] - cycle_arr[0] - ifmap_hit_latency
+            A_serviced_cycles += [A_cycle_out[0]]
+            A_stalls = A_cycle_out[0] - cycle_arr[0] - A_hit_latency
 
-            filter_demand_line = filter_demand_mat[i, :].reshape((1, filter_demand_mat.shape[1]))
-            filter_cycle_out = self.filter_buf.service_reads(incoming_requests_arr_np=filter_demand_line,
-                                                           incoming_cycles_arr=cycle_arr)
-            filter_serviced_cycles += [filter_cycle_out[0]]
-            filter_stalls = filter_cycle_out[0] - cycle_arr[0] - filter_hit_latency
+            
+            b_demand_line = np.reshape(b_demand_mat[i, :],(1, PEs))
+            b_cycle_out = self.b_buf.service_reads(incoming_requests_arr_np=b_demand_line,
+                                                        incoming_cycles_arr=cycle_arr)
+            b_serviced_cycles += [b_cycle_out[0]]
+            b_stalls = b_cycle_out[0] - cycle_arr[0] - b_hit_latency
+            
 
-            ofmap_demand_line = ofmap_demand_mat[i, :].reshape((1, ofmap_demand_mat.shape[1]))
-            ofmap_cycle_out = self.ofmap_buf.service_writes(incoming_requests_arr_np=ofmap_demand_line,
-                                                             incoming_cycles_arr_np=cycle_arr)
-            ofmap_serviced_cycles += [ofmap_cycle_out[0]]
-            ofmap_stalls = ofmap_cycle_out[0] - cycle_arr[0]
+            xin_demand_line = np.reshape(xin_demand_mat[i],(1, PEs))
+            xin_cycle_out = self.xin_buf.service_reads(incoming_requests_arr_np=xin_demand_line,
+                                                        incoming_cycles_arr=cycle_arr)
+            xin_serviced_cycles += [xin_cycle_out[0]]
+            xin_stalls = xin_cycle_out[0] - cycle_arr[0] - xin_hit_latency
 
-            self.stall_cycles += int(max(ifmap_stalls[0], filter_stalls[0], ofmap_stalls[0]))
+            
+            x_demand_line = np.reshape(x_demand_mat[i, :],(1, PEs))
+            x_cycle_out = self.x_buf.service_writes(incoming_requests_arr_np=x_demand_line,
+                                                            incoming_cycles_arr_np=cycle_arr)
+            x_serviced_cycles += [x_cycle_out[0]]
+            x_stalls = x_cycle_out[0] - cycle_arr[0]
+            
+
+            self.stall_cycles += int(max(A_stalls, b_stalls, x_stalls, xin_stalls))
 
         if self.estimate_bandwidth_mode:
             # IDE shows warning as complete_all_prefetches is not implemented in read_buffer class
             # It is harmless since, in estimate bandwidth mode, read_buffer_estimate_bw is instantiated
-            self.ifmap_buf.complete_all_prefetches()
-            self.filter_buf.complete_all_prefetches()
+            self.A_buf.complete_all_prefetches()
+            self.b_buf.complete_all_prefetches()
+            self.xin_buf.complete_all_prefetches()
 
-        self.ofmap_buf.empty_all_buffers(ofmap_serviced_cycles[-1])
+        self.x_buf.empty_all_buffers(x_serviced_cycles[-1])
 
         # Prepare the traces
-        ifmap_services_cycles_np = np.asarray(ifmap_serviced_cycles).reshape((len(ifmap_serviced_cycles), 1))
-        self.ifmap_trace_matrix = np.concatenate((ifmap_services_cycles_np, ifmap_demand_mat), axis=1)
+        A_services_cycles_np = np.asarray(A_serviced_cycles).reshape((len(A_serviced_cycles), 1))
+        self.A_trace_matrix = np.concatenate((A_services_cycles_np, A_demand_mat), axis=1)
 
-        filter_services_cycles_np = np.asarray(filter_serviced_cycles).reshape((len(filter_serviced_cycles), 1))
-        self.filter_trace_matrix = np.concatenate((filter_services_cycles_np, filter_demand_mat), axis=1)
+        b_services_cycles_np = np.asarray(b_serviced_cycles).reshape((len(b_serviced_cycles), 1))
+        self.b_trace_matrix = np.concatenate((b_services_cycles_np, b_demand_mat), axis=1)
 
-        ofmap_services_cycles_np = np.asarray(ofmap_serviced_cycles).reshape((len(ofmap_serviced_cycles), 1))
-        self.ofmap_trace_matrix = np.concatenate((ofmap_services_cycles_np, ofmap_demand_mat), axis=1)
-        self.total_cycles = int(ofmap_serviced_cycles[-1][0])
+        xin_services_cycles_np = np.asarray(xin_serviced_cycles).reshape((len(xin_serviced_cycles), 1))
+        self.xin_trace_matrix = np.concatenate((xin_services_cycles_np, xin_demand_mat), axis=1)
+
+        x_services_cycles_np = np.asarray(x_serviced_cycles).reshape((len(x_serviced_cycles), 1))
+        self.x_trace_matrix = np.concatenate((x_services_cycles_np, x_demand_mat), axis=1)
+        self.total_cycles = int(x_serviced_cycles[-1][0])
 
         # END of serving demands from memory
         self.traces_valid = True
@@ -361,188 +414,246 @@ class double_buffered_scratchpad:
         return self.stall_cycles
 
     #
-    def get_ifmap_sram_start_stop_cycles(self):
+    def get_A_sram_start_stop_cycles(self):
         assert self.traces_valid, 'Traces not generated yet'
 
         done = False
-        for ridx in range(self.ifmap_trace_matrix.shape[0]):
+        for ridx in range(self.A_trace_matrix.shape[0]):
             if done:
                 break
-            row = self.ifmap_trace_matrix[ridx,1:]
+            row = self.A_trace_matrix[ridx,1:]
             for addr in row:
                 if not addr == -1:
-                    self.ifmap_sram_start_cycle = self.ifmap_trace_matrix[ridx][0]
+                    self.A_sram_start_cycle = self.A_trace_matrix[ridx][0]
                     done = True
                     break
 
         done = False
-        for ridx in range(self.ifmap_trace_matrix.shape[0]):
-            if done:
-                break
-            ridx = -1 * (ridx + 1)
-            row = self.ifmap_trace_matrix[ridx,1:]
-            for addr in row:
-                if not addr == -1:
-                    self.ifmap_sram_stop_cycle  = self.ifmap_trace_matrix[ridx][0]
-                    done = True
-                    break
-
-        return self.ifmap_sram_start_cycle, self.ifmap_sram_stop_cycle
-
-    #
-    def get_filter_sram_start_stop_cycles(self):
-        assert self.traces_valid, 'Traces not generated yet'
-
-        done = False
-        for ridx in range(self.filter_trace_matrix.shape[0]):
-            if done:
-                break
-            row = self.filter_trace_matrix[ridx, 1:]
-            for addr in row:
-                if not addr == -1:
-                    self.filter_sram_start_cycle = self.filter_trace_matrix[ridx][0]
-                    done = True
-                    break
-
-        done = False
-        for ridx in range(self.filter_trace_matrix.shape[0]):
+        for ridx in range(self.A_trace_matrix.shape[0]):
             if done:
                 break
             ridx = -1 * (ridx + 1)
-            row = self.filter_trace_matrix[ridx, 1:]
+            row = self.A_trace_matrix[ridx,1:]
             for addr in row:
                 if not addr == -1:
-                    self.filter_sram_stop_cycle = self.filter_trace_matrix[ridx][0]
+                    self.A_sram_stop_cycle  = self.A_trace_matrix[ridx][0]
                     done = True
                     break
 
-        return self.filter_sram_start_cycle, self.filter_sram_stop_cycle
+        return self.A_sram_start_cycle, self.A_sram_stop_cycle
 
     #
-    def get_ofmap_sram_start_stop_cycles(self):
+    def get_b_sram_start_stop_cycles(self):
         assert self.traces_valid, 'Traces not generated yet'
 
         done = False
-        for ridx in range(self.ofmap_trace_matrix.shape[0]):
+        for ridx in range(self.b_trace_matrix.shape[0]):
             if done:
                 break
-            row = self.ofmap_trace_matrix[ridx, 1:]
+            row = self.b_trace_matrix[ridx, 1:]
             for addr in row:
                 if not addr == -1:
-                    self.ofmap_sram_start_cycle = self.ofmap_trace_matrix[ridx][0]
+                    self.b_sram_start_cycle = self.b_trace_matrix[ridx][0]
                     done = True
                     break
 
         done = False
-        for ridx in range(self.ofmap_trace_matrix.shape[0]):
+        for ridx in range(self.b_trace_matrix.shape[0]):
             if done:
                 break
             ridx = -1 * (ridx + 1)
-            row = self.ofmap_trace_matrix[ridx, 1:]
+            row = self.b_trace_matrix[ridx, 1:]
             for addr in row:
                 if not addr == -1:
-                    self.ofmap_sram_stop_cycle = self.ofmap_trace_matrix[ridx][0]
+                    self.b_sram_stop_cycle = self.b_trace_matrix[ridx][0]
                     done = True
                     break
 
-        return self.ofmap_sram_start_cycle, self.ofmap_sram_stop_cycle
+        return self.b_sram_start_cycle, self.b_sram_stop_cycle
 
     #
-    def get_ifmap_dram_details(self):
+    def get_x_sram_start_stop_cycles(self):
         assert self.traces_valid, 'Traces not generated yet'
 
-        self.ifmap_dram_reads = self.ifmap_buf.get_num_accesses()
-        self.ifmap_dram_start_cycle, self.ifmap_dram_stop_cycle \
-            = self.ifmap_buf.get_external_access_start_stop_cycles()
+        done = False
+        for ridx in range(self.x_trace_matrix.shape[0]):
+            if done:
+                break
+            row = self.x_trace_matrix[ridx, 1:]
+            for addr in row:
+                if not addr == -1:
+                    self.x_sram_start_cycle = self.x_trace_matrix[ridx][0]
+                    done = True
+                    break
 
-        return self.ifmap_dram_start_cycle, self.ifmap_dram_stop_cycle, self.ifmap_dram_reads
+        done = False
+        for ridx in range(self.x_trace_matrix.shape[0]):
+            if done:
+                break
+            ridx = -1 * (ridx + 1)
+            row = self.x_trace_matrix[ridx, 1:]
+            for addr in row:
+                if not addr == -1:
+                    self.x_sram_stop_cycle = self.x_trace_matrix[ridx][0]
+                    done = True
+                    break
+
+        return self.x_sram_start_cycle, self.x_sram_stop_cycle
 
     #
-    def get_filter_dram_details(self):
+    def get_xin_sram_start_stop_cycles(self):
         assert self.traces_valid, 'Traces not generated yet'
 
-        self.filter_dram_reads = self.filter_buf.get_num_accesses()
-        self.filter_dram_start_cycle, self.filter_dram_stop_cycle \
-            = self.filter_buf.get_external_access_start_stop_cycles()
+        done = False
+        for ridx in range(self.x_trace_matrix.shape[0]):
+            if done:
+                break
+            row = self.xin_trace_matrix[ridx, 1:]
+            for addr in row:
+                if not addr == -1:
+                    self.xin_sram_start_cycle = self.xin_trace_matrix[ridx][0]
+                    done = True
+                    break
 
-        return self.filter_dram_start_cycle, self.filter_dram_stop_cycle, self.filter_dram_reads
+        done = False
+        for ridx in range(self.xin_trace_matrix.shape[0]):
+            if done:
+                break
+            ridx = -1 * (ridx + 1)
+            row = self.xin_trace_matrix[ridx, 1:]
+            for addr in row:
+                if not addr == -1:
+                    self.xin_sram_stop_cycle = self.xin_trace_matrix[ridx][0]
+                    done = True
+                    break
+
+        return self.xin_sram_start_cycle, self.xin_sram_stop_cycle
 
     #
-    def get_ofmap_dram_details(self):
+    def get_A_dram_details(self):
         assert self.traces_valid, 'Traces not generated yet'
 
-        self.ofmap_dram_writes = self.ofmap_buf.get_num_accesses()
-        self.ofmap_dram_start_cycle, self.ofmap_dram_stop_cycle \
-            = self.ofmap_buf.get_external_access_start_stop_cycles()
+        self.A_dram_reads = self.A_buf.get_num_accesses()
+        self.A_dram_start_cycle, self.A_dram_stop_cycle \
+            = self.A_buf.get_external_access_start_stop_cycles()
 
-        return self.ofmap_dram_start_cycle, self.ofmap_dram_stop_cycle, self.ofmap_dram_writes
+        return self.A_dram_start_cycle, self.A_dram_stop_cycle, self.A_dram_reads
 
     #
-    def get_ifmap_sram_trace_matrix(self):
+    def get_b_dram_details(self):
         assert self.traces_valid, 'Traces not generated yet'
-        return self.ifmap_trace_matrix
+
+        self.b_dram_reads = self.b_buf.get_num_accesses()
+        self.b_dram_start_cycle, self.b_dram_stop_cycle \
+            = self.b_buf.get_external_access_start_stop_cycles()
+
+        return self.b_dram_start_cycle, self.b_dram_stop_cycle, self.b_dram_reads
+
+   #
+    def get_xin_dram_details(self):
+        assert self.traces_valid, 'Traces not generated yet'
+
+        self.xin_dram_reads = self.xin_buf.get_num_accesses()
+        self.xin_dram_start_cycle, self.xin_dram_stop_cycle \
+            = self.xin_buf.get_external_access_start_stop_cycles()
+
+        return self.xin_dram_start_cycle, self.xin_dram_stop_cycle, self.xin_dram_reads
 
     #
-    def get_filter_sram_trace_matrix(self):
+    def get_x_dram_details(self):
         assert self.traces_valid, 'Traces not generated yet'
-        return self.filter_trace_matrix
+
+        self.x_dram_writes = self.x_buf.get_num_accesses()
+        self.x_dram_start_cycle, self.x_dram_stop_cycle \
+            = self.x_buf.get_external_access_start_stop_cycles()
+
+        return self.x_dram_start_cycle, self.x_dram_stop_cycle, self.x_dram_writes
 
     #
-    def get_ofmap_sram_trace_matrix(self):
+    def get_A_sram_trace_matrix(self):
         assert self.traces_valid, 'Traces not generated yet'
-        return self.ofmap_trace_matrix
+        return self.A_trace_matrix
+
+    #
+    def get_b_sram_trace_matrix(self):
+        assert self.traces_valid, 'Traces not generated yet'
+        return self.b_trace_matrix
+
+    #
+    def get_x_sram_trace_matrix(self):
+        assert self.traces_valid, 'Traces not generated yet'
+        return self.x_trace_matrix
+
+    #
+    def get_xin_sram_trace_matrix(self):
+        assert self.traces_valid, 'Traces not generated yet'
+        return self.x_trace_matrix
 
     #
     def get_sram_trace_matrices(self):
         assert self.traces_valid, 'Traces not generated yet'
-        return self.ifmap_trace_matrix, self.filter_trace_matrix, self.ofmap_trace_matrix
+        return self.A_trace_matrix, self.b_trace_matrix, self.x_trace_matrix, self.xin_trace_matrix
 
     #
-    def get_ifmap_dram_trace_matrix(self):
-        return self.ifmap_buf.get_trace_matrix()
+    def get_A_dram_trace_matrix(self):
+        return self.A_buf.get_trace_matrix()
 
     #
-    def get_filter_dram_trace_matrix(self):
-        return self.filter_buf.get_trace_matrix()
+    def get_b_dram_trace_matrix(self):
+        return self.b_buf.get_trace_matrix()
+
+   #
+    def get_xin_dram_trace_matrix(self):
+        return self.xin_buf.get_trace_matrix()
 
     #
-    def get_ofmap_dram_trace_matrix(self):
-        return self.ofmap_buf.get_trace_matrix()
+    def get_x_dram_trace_matrix(self):
+        return self.x_buf.get_trace_matrix()
 
     #
     def get_dram_trace_matrices(self):
-        dram_ifmap_trace = self.ifmap_buf.get_trace_matrix()
-        dram_filter_trace = self.filter_buf.get_trace_matrix()
-        dram_ofmap_trace = self.ofmap_buf.get_trace_matrix()
+        dram_A_trace = self.A_buf.get_trace_matrix()
+        dram_b_trace = self.b_buf.get_trace_matrix()
+        dram_xin_trace = self.xin_buf.get_trace_matrix()
+        dram_x_trace = self.x_buf.get_trace_matrix()
 
-        return dram_ifmap_trace, dram_filter_trace, dram_ofmap_trace
+        return dram_A_trace, dram_b_trace, dram_x_trace, dram_xin_trace
 
         #
-    def print_ifmap_sram_trace(self, filename):
+    def print_A_sram_trace(self, filename):
         assert self.traces_valid, 'Traces not generated yet'
-        np.savetxt(filename, self.ifmap_trace_matrix, fmt='%i', delimiter=",")
+        np.savetxt(filename, self.A_trace_matrix, fmt='%i', delimiter=",")
 
     #
-    def print_filter_sram_trace(self, filename):
+    def print_b_sram_trace(self, filename):
         assert self.traces_valid, 'Traces not generated yet'
-        np.savetxt(filename, self.filter_trace_matrix, fmt='%i', delimiter=",")
+        np.savetxt(filename, self.b_trace_matrix, fmt='%i', delimiter=",")
 
     #
-    def print_ofmap_sram_trace(self, filename):
+    def print_x_sram_trace(self, filename):
         assert self.traces_valid, 'Traces not generated yet'
-        np.savetxt(filename, self.ofmap_trace_matrix, fmt='%i', delimiter=",")
+        np.savetxt(filename, self.x_trace_matrix, fmt='%i', delimiter=",")
 
     #
-    def print_ifmap_dram_trace(self, filename):
-        self.ifmap_buf.print_trace(filename)
+    def print_xin_sram_trace(self, filename):
+        assert self.traces_valid, 'Traces not generated yet'
+        np.savetxt(filename, self.xin_trace_matrix, fmt='%i', delimiter=",")
 
     #
-    def print_filter_dram_trace(self, filename):
-        self.filter_buf.print_trace(filename)
+    def print_A_dram_trace(self, filename):
+        self.A_buf.print_trace(filename)
 
     #
-    def print_ofmap_dram_trace(self, filename):
-        self.ofmap_buf.print_trace(filename)
+    def print_b_dram_trace(self, filename):
+        self.b_buf.print_trace(filename)
+
+    #
+    def print_x_dram_trace(self, filename):
+        self.x_buf.print_trace(filename)
+
+    #
+    def print_xin_dram_trace(self, filename):
+        self.xin_buf.print_trace(filename)
 
 
 

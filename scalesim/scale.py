@@ -1,6 +1,6 @@
 import argparse
 
-from scalesim.scale_sim import scalesim
+from scale_sim import scalesim
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     if inp_type == 'gemm':
         gemm_input = True
 
-    s = scalesim(save_disk_space=True, verbose=True,
+    s = scalesim(save_disk_space=False, verbose=True,
                  config=config,
                  topology=topology,
                  input_type_gemm=gemm_input
