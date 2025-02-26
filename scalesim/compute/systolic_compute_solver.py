@@ -67,7 +67,7 @@ class systolic_compute_solver:
         assert A_col == b_row, "Dimension mismatch between operands"
 
         self.Sr = self.A_op_mat.shape[0]
-        self.Sc = self.A_op_mat.shape[0]
+        self.Sc = self.A_op_mat.shape[1]
         self.T = self.A_op_mat.shape[0]
 
         self.arr_row, self.arr_col = self.config.get_array_dims()
@@ -96,9 +96,9 @@ class systolic_compute_solver:
                 row_end_idx = min(row_start_id + self.arr_row, self.Sr)
                 row_delta = self.arr_row - (row_end_idx - row_start_id)
 
-                col_start_id = fc * self.arr_col
-                col_end_idx = min(col_start_id + self.arr_col, self.Sc)
-                col_delta = self.arr_col - (col_end_idx - col_start_id)
+                col_start_id = fc * self.arr_row
+                col_end_idx = min(col_start_id + self.arr_row, self.Sc)
+                col_delta = self.arr_row - (col_end_idx - col_start_id)
 
                 this_fold_prefetch = self.A_op_mat[row_start_id: row_end_idx, col_start_id: col_end_idx]
 
@@ -151,8 +151,8 @@ class systolic_compute_solver:
 
             # Take into account under utilization
             if delta > 0:
-                null_req_mat = np.ones((delta,1)) * 0
-                this_fold_prefetch = np.concatenate((this_fold_prefetch, null_req_mat), axis=1)
+                null_req_mat = np.ones((delta,1)) * -1
+                this_fold_prefetch = np.concatenate((this_fold_prefetch, null_req_mat), axis=0)
 
             if fr == 0:
                 self.xin_prefetch_matrix = this_fold_prefetch
@@ -208,13 +208,13 @@ class systolic_compute_solver:
 
             # Take into account under utilization
             if delta > 0:
-                null_req_mat = np.ones((delta,1)) * 0
-                this_fold_prefetch = np.concatenate((this_fold_prefetch, null_req_mat), axis=1)
+                null_req_mat = np.ones((delta,1)) * -1
+                this_fold_prefetch = np.concatenate((this_fold_prefetch, null_req_mat), axis=0)
 
             if fr == 0:
                 self.b_prefetch_matrix = this_fold_prefetch
             else:
-                self.b_prefetch_matrix = np.concatenate((self.b_prefetch_matrix, this_fold_prefetch), axis=0)
+                self.b_prefetch_matrix = np.concatenate((self.b_prefetch_matrix, this_fold_prefetch), axis=1)
 
 
         # Fixing ISSUE #15, #16
@@ -268,7 +268,7 @@ class systolic_compute_solver:
         assert self.params_set_flag, 'Parameters are not set'
 
         inter_fold_gap_suffix = self.arr_row - 1
-        inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_col)) * -1
+        inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_row)) * -1
 
         # Debug messages
         #print('DEBUG: create_filter_demand_mat()')
@@ -286,7 +286,7 @@ class systolic_compute_solver:
                 # Take into account under utilization
                 if delta > 0:
                     null_req_mat = np.ones((delta,1)) * -1
-                    this_fold_demand = np.concatenate((this_fold_demand, null_req_mat), axis=1)
+                    this_fold_demand = np.concatenate((this_fold_demand, null_req_mat), axis=0)
                 
                 this_fold_demand = np.reshape(this_fold_demand,(1,this_fold_demand.shape[0]))
 
@@ -306,7 +306,7 @@ class systolic_compute_solver:
         assert self.params_set_flag, 'Parameters are not set'
 
         # Anand: Concatenation issue fix
-        inter_fold_gap_suffix = self.arr_col - 1
+        inter_fold_gap_suffix = self.arr_row - 1
         inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_row)) * -1
 
         # DEBUG section
@@ -319,9 +319,9 @@ class systolic_compute_solver:
                 row_end_idx = min(row_start_id + self.arr_row, self.Sr)
                 row_delta = self.arr_row - (row_end_idx - row_start_id)
 
-                col_start_id = fc * self.arr_col
-                col_end_idx = min(col_start_id + self.arr_col, self.Sc)
-                col_delta = self.arr_col - (col_end_idx - col_start_id)
+                col_start_id = fc * self.arr_row
+                col_end_idx = min(col_start_id + self.arr_row, self.Sc)
+                col_delta = self.arr_row - (col_end_idx - col_start_id)
 
                 this_fold_demand = self.A_op_mat[row_start_id: row_end_idx, col_start_id: col_end_idx]
                 self.A_reads += this_fold_demand.shape[0] * this_fold_demand.shape[1]
@@ -354,7 +354,7 @@ class systolic_compute_solver:
         assert self.params_set_flag, 'Parameters are not set'
 
         inter_fold_gap_suffix = self.arr_row - 1
-        inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_col)) * -1
+        inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_row)) * -1
 
         # Debug messages
         #print('DEBUG: create_filter_demand_mat()')
@@ -373,11 +373,10 @@ class systolic_compute_solver:
                     this_fold_demand = np.ones(self.b_op_mat[row_start_id: row_end_idx].shape) * -1
                     self.b_reads += 0
                 
-
                 # Take into account under utilization
                 if delta > 0:
-                    null_req_mat = np.ones((delta,1)) * 0
-                    this_fold_demand = np.concatenate((this_fold_demand, null_req_mat), axis=1)
+                    null_req_mat = np.ones((delta,1)) * -1
+                    this_fold_demand = np.concatenate((this_fold_demand, null_req_mat), axis=0)
 
                 # In this computation scheme we are allowing the generated outputs to drain out before
                 # starting the next fold
@@ -402,7 +401,7 @@ class systolic_compute_solver:
         assert self.params_set_flag, 'Parameters are not set'
 
         inter_fold_gap_suffix = self.arr_row - 1
-        inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_col)) * -1
+        inter_fold_gap_suffix_mat = np.ones((inter_fold_gap_suffix, self.arr_row)) * -1
 
         # Debug messages
         #print('DEBUG: create_filter_demand_mat()')
@@ -420,7 +419,7 @@ class systolic_compute_solver:
                 # Take into account under utilization
                 if delta > 0:
                     null_req_mat = np.ones((delta,1)) * -1
-                    this_fold_demand = np.concatenate((this_fold_demand, null_req_mat), axis=1)
+                    this_fold_demand = np.concatenate((this_fold_demand, null_req_mat), axis=0)
 
                 # Calculate the mapping efficiency
                 col_used = 1
@@ -430,7 +429,7 @@ class systolic_compute_solver:
 
                 cycles_this_fold = self.arr_row
                 compute_cycles_this_fold = mac_used * cycles_this_fold
-                compute_util_this_fold = compute_cycles_this_fold / (self.arr_row * self.arr_row * cycles_this_fold)
+                compute_util_this_fold = compute_cycles_this_fold / (self.arr_row * cycles_this_fold)
 
                 self.mapping_efficiency_per_fold.append(mapping_eff_this_fold)
                 self.compute_utility_per_fold.append(compute_util_this_fold)

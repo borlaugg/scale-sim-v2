@@ -107,7 +107,7 @@ class single_layer_sim:
             self.compute_system = systolic_compute_is()
 
         arr_dims =self.config.get_array_dims()
-        self.num_mac_unit = arr_dims[0] * arr_dims[1]
+        self.num_mac_unit = arr_dims[0] 
         self.verbose=verbose
 
         self.params_set_flag = True
@@ -156,9 +156,8 @@ class single_layer_sim:
 
         # self.num_compute = self.topo.get_layer_num_ofmap_px(self.layer_id) \
                         #    * self.topo.get_layer_window_size(self.layer_id)
-        #TODO check this for correctness
-        n, m = self.config.get_array_dims()
-        self.num_compute = self.solver.get_num_iter()*2*(pow(n,2))
+        n, m = A_op_mat.shape
+        self.num_compute = m*n
 
         # 1.2 Get the prefetch matrices for both operands
         # self.compute_system.set_params(config_obj=self.config,

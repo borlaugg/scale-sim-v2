@@ -10,7 +10,7 @@ class scale_config:
         self.use_user_bandwidth = False
 
         self.array_rows = 10
-        self.array_cols = 10
+        self.array_cols = 1
 
         # self.array_rows = 4
         # self.array_cols = 4
