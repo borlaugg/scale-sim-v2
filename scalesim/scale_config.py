@@ -9,8 +9,17 @@ class scale_config:
         # Anand: ISSUE #2. Patch
         self.use_user_bandwidth = False
 
-        self.array_rows = 10
+        self.array_rows = 1
         self.array_cols = 1
+
+        self.A_r = 1           #Added rows and column sizes for operands 
+        self.A_c = 1
+        self.x_r = 1
+        self.x_c = 1
+        self.b_r = 1    
+        self.b_c = 1
+        self.xin_r = 1
+        self.xin_c = 1
 
         # self.array_rows = 4
         # self.array_cols = 4
@@ -32,13 +41,12 @@ class scale_config:
         self.x_offset = 30000000
         self.topofile = ""
         self.bandwidths = []
-        self.valid_conf_flag = False
+        self.valid_conf_flag = True
 
         self.valid_df_list = ['os', 'ws', 'is','solver']
 
     #
     def read_conf_file(self, conf_file_in):
-
         me = 'scale_config.' + 'read_conf_file()'
 
         config = cp.ConfigParser()
@@ -61,12 +69,21 @@ class scale_config:
 
         section = 'architecture_presets'
         self.array_rows = 10
-        self.array_cols = 10
+        self.array_cols = 1
+
+        self.A_r = 109           #Added rows and column sizes for operands 
+        self.A_c = 109
+        self.x_r = 109
+        self.x_c = 1
+        self.b_r = 109  
+        self.b_c = 1
+        self.xin_r = 109
+        self.xin_c = 1
         
-        self.A_sz_kb = 1024
-        self.b_sz_kb = 256
-        self.x_sz_kb = 256
-        self.xin_sz_kb = 256
+        self.A_sz_kb = self.array_rows*self.array_cols*32
+        self.b_sz_kb = self.array_rows*32
+        self.x_sz_kb = self.array_rows*32
+        self.xin_sz_kb = self.array_rows*32
         self.df = 'solver'
         self.A_offset = 0
         self.b_offset = 10000000
@@ -288,6 +305,21 @@ class scale_config:
             print(message)
         else:
             return min(self.bandwidths)
+
+    def get_num_iter(self):
+        return self.num_iter
+
+    def get_A_dims(self,layer_id):
+        return (self.A_r,self.A_c)
+
+    def get_x_dims(self,layer_id):
+        return (self.x_r,self.x_c)
+
+    def get_b_dims(self,layer_id):
+        return (self.b_r,self.b_c)
+
+    def get_xin_dims(self,layer_id):
+        return (self.xin_r,self.xin_c)
 
     # FIX ISSUE #14
     @staticmethod

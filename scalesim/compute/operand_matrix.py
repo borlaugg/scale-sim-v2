@@ -141,13 +141,13 @@ class operand_matrix(object):
         self.solver = solver_obj
         self.layer_id = layer_id
 
-        self.A_rows, self.A_cols = self.solver.get_A_dims(self.layer_id)
-        self.b_rows, self.b_cols = self.solver.get_b_dims(self.layer_id)
-        self.xin_rows, self.xin_cols = self.solver.get_xin_dims(self.layer_id)
+        self.A_rows, self.A_cols = self.config.get_A_dims(self.layer_id)
+        self.b_rows, self.b_cols = self.config.get_b_dims(self.layer_id)
+        self.xin_rows, self.xin_cols = self.config.get_xin_dims(self.layer_id)
         
 
         # Assign the calculated hyper parameters
-        self.x_rows, self.x_cols = self.solver.get_x_dims(self.layer_id)
+        self.x_rows, self.x_cols = self.config.get_x_dims(self.layer_id)
 
         # Assign the offsets
         self.A_offset, self.b_offset, self.x_offset, self.xin_offset \

@@ -131,7 +131,7 @@ class ReadBufferEstimateBw:
 
                 if self.current_set_id == self.read_buffer_set_end_id + 1:  # This should be prefetched
                     if not self.active_buffer_prefetch_done:
-                        self.prefetch_bandwidth = self.default_bandwidth
+                        self.prefetch_bandwidth = self.default_bandwidth  
                         self.last_prefetch_end_cycle = self.first_request_rcvd_cycle - 1 - self.backing_buffer.get_latency()
 
                         cycles_needed = (self.num_sets_prefetch_buffer * self.num_items_per_set) \

@@ -157,7 +157,7 @@ class single_layer_sim:
         # self.num_compute = self.topo.get_layer_num_ofmap_px(self.layer_id) \
                         #    * self.topo.get_layer_window_size(self.layer_id)
         n, m = A_op_mat.shape
-        self.num_compute = m*n
+        self.num_compute = m*n +2*m*n
 
         # 1.2 Get the prefetch matrices for both operands
         # self.compute_system.set_params(config_obj=self.config,
@@ -173,7 +173,7 @@ class single_layer_sim:
 
         # 1.3 Get the no compute demand matrices from for 2 operands and the output
         A_prefetch_mat, b_prefetch_mat, xin_prefetch_mat = self.compute_system.get_prefetch_matrices()
-        A_demand_mat, b_demand_mat, x_demand_mat, xin_demand_matrix = self.compute_system.get_demand_matrices()
+        A_demand_mat, b_demand_mat, x_demand_mat, xin_demand_mat = self.compute_system.get_demand_matrices()
         #print('DEBUG: Compute operations done')
         # 2. Setup the memory system and run the demands through it to find any memory bottleneck and generate traces
 
@@ -184,10 +184,10 @@ class single_layer_sim:
             active_buf_frac = 0.5   # This can be incorporated in the config as well
 
             A_buf_size_kb, b_buf_size_kb, x_buf_size_kb, xin_buf_size_kb = self.config.get_mem_sizes()
-            A_buf_size_bytes = 1024 * A_buf_size_kb
-            b_buf_size_bytes = 1024 * b_buf_size_kb
-            x_buf_size_bytes = 1024 * x_buf_size_kb
-            xin_buf_size_bytes = 1024 * xin_buf_size_kb
+            A_buf_size_bytes = 2*A_buf_size_kb
+            b_buf_size_bytes = 2*b_buf_size_kb
+            x_buf_size_bytes = 2*x_buf_size_kb
+            xin_buf_size_bytes = 2*xin_buf_size_kb
 
             A_backing_bw = 1
             b_backing_bw = 1
@@ -235,7 +235,7 @@ class single_layer_sim:
 
         # 2.3 Start sending the requests through the memory system until
         # all the OFMAP memory requests have been serviced
-        self.memory_system.service_memory_requests(A_demand_mat, b_demand_mat, x_demand_mat, xin_demand_matrix)
+        self.memory_system.service_memory_requests(A_demand_mat, b_demand_mat, x_demand_mat, xin_demand_mat)
 
         self.runs_ready = True
 
@@ -273,7 +273,7 @@ class single_layer_sim:
         # Compute report
         self.total_cycles = self.memory_system.get_total_compute_cycles()
         self.stall_cycles = self.memory_system.get_stall_cycles()
-        self.overall_util = (self.num_compute * 100) / (self.total_cycles * self.num_mac_unit)
+        self.overall_util = (self.total_cycles * self.num_mac_unit * 100) / (self.num_compute) 
         self.mapping_eff = self.compute_system.get_avg_mapping_efficiency() * 100
         self.compute_util = self.compute_system.get_avg_compute_utilization() * 100
 
