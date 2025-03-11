@@ -234,8 +234,7 @@ class double_buffered_scratchpad:
             x_cycle_out = self.x_buf.service_writes(incoming_requests_arr_np=x_demand_line,
                                                             incoming_cycles_arr_np=cycle_arr)
             x_serviced_cycles += [x_cycle_out[0]]
-            x_stalls = x_cycle_out[0] - cycle_arr[0]
-            
+            x_stalls = x_cycle_out[0] - cycle_arr[0]            
 
             self.stall_cycles += int(max(A_stalls, b_stalls, x_stalls, xin_stalls))
 
@@ -261,7 +260,7 @@ class double_buffered_scratchpad:
         x_services_cycles_np = np.asarray(x_serviced_cycles).reshape((len(x_serviced_cycles), 1))
         self.x_trace_matrix = np.concatenate((x_services_cycles_np, x_demand_mat), axis=1)
         
-        self.total_cycles = int(x_serviced_cycles[-1][0])
+        self.total_cycles = int(A_serviced_cycles[-1][0])
 
         # END of serving demands from memory
         self.traces_valid = True

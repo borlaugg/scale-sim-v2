@@ -155,10 +155,10 @@ class scalesim:
         print("Array Size: \t" + str(arr_h) + "x" + str(arr_w))
 
         A_kb, b_kb, x_kb, xin_kb = self.config.get_mem_sizes()
-        print("SRAM A (kB): \t" + str(A_kb))
-        print("SRAM b (kB): \t" + str(b_kb))
-        print("SRAM x_in (kB): \t" + str(xin_kb))
-        print("SRAM x (kB): \t" + str(x_kb))
+        print("SRAM A (B): \t" + str(A_kb))
+        print("SRAM b (B): \t" + str(b_kb))
+        print("SRAM x_in (B): \t" + str(xin_kb))
+        print("SRAM x (B): \t" + str(x_kb))
         print("Dataflow: \t" + df_string)
         print("CSV file path: \t" + self.config.get_topology_path())
 

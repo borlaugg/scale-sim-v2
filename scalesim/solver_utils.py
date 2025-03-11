@@ -18,7 +18,7 @@ class solver(object):
     # reset topology parameters
     def reset(self):
         print("All data reset")
-        self.num_iter = 10  
+        self.num_iter = 100000  
         self.threshold = 1
 
     # return number of iterations

@@ -273,7 +273,7 @@ class single_layer_sim:
         # Compute report
         self.total_cycles = self.memory_system.get_total_compute_cycles()
         self.stall_cycles = self.memory_system.get_stall_cycles()
-        self.overall_util = (self.total_cycles * self.num_mac_unit * 100) / (self.num_compute) 
+        self.overall_util = (self.num_compute * 100) / (self.total_cycles * self.num_mac_unit + self. num_compute)
         self.mapping_eff = self.compute_system.get_avg_mapping_efficiency() * 100
         self.compute_util = self.compute_system.get_avg_compute_utilization() * 100
 

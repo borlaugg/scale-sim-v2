@@ -68,16 +68,16 @@ class scale_config:
             return
 
         section = 'architecture_presets'
-        self.array_rows = 10
+        self.array_rows = 5000
         self.array_cols = 1
 
-        self.A_r = 109           #Added rows and column sizes for operands 
-        self.A_c = 109
-        self.x_r = 109
+        self.A_r = 4000           #Added rows and column sizes for operands 
+        self.A_c = 4000
+        self.x_r = 4000
         self.x_c = 1
-        self.b_r = 109  
+        self.b_r = 4000  
         self.b_c = 1
-        self.xin_r = 109
+        self.xin_r = 4000
         self.xin_c = 1
         
         self.A_sz_kb = self.array_rows*self.array_cols*32
