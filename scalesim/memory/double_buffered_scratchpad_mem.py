@@ -260,7 +260,8 @@ class double_buffered_scratchpad:
 
         x_services_cycles_np = np.asarray(x_serviced_cycles).reshape((len(x_serviced_cycles), 1))
         self.x_trace_matrix = np.concatenate((x_services_cycles_np, x_demand_mat), axis=1)
-        self.total_cycles = int(x_serviced_cycles[-1][0] + b_serviced_cycles[-1][0] + A_serviced_cycles[-1][0] + xin_serviced_cycles[-1][0])
+        
+        self.total_cycles = int(x_serviced_cycles[-1][0])
 
         # END of serving demands from memory
         self.traces_valid = True
