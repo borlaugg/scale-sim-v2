@@ -4,7 +4,7 @@ import math
 class solver(object):
 
     def __init__(self):
-        self.num_iter = 1    # Risha: Upper limit on number of iterations
+        self.num_iter = 1000    # Risha: Upper limit on number of iterations ##EDIT HERE
         self.threshold = 1  # Risha: Parameter to store the threshold for convergence
         self.A_r = 1           #Added rows and column sizes for operands 
         self.A_c = 1
@@ -18,7 +18,7 @@ class solver(object):
     # reset topology parameters
     def reset(self):
         print("All data reset")
-        self.num_iter = 100000  
+        self.num_iter = 1000 
         self.threshold = 1
 
     # return number of iterations
