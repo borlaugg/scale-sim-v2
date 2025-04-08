@@ -72,8 +72,8 @@ class systolic_compute_solver:
 
         self.arr_row, self.arr_col = self.config.get_array_dims()
 
-        self.col_fold = math.ceil(self.Sr / self.arr_row)
-        self.row_fold = self.col_fold
+        self.col_fold = self.config.get_col_fold()
+        self.row_fold = math.ceil(self.Sr / self.arr_row)
 
         self.params_set_flag = True
 

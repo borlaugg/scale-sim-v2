@@ -68,10 +68,11 @@ class scale_config:
             return
 
         section = 'architecture_presets'
-        self.array_rows = 2048
+        self.array_rows = 1024
         self.array_cols = 1
+        self.col_fold = 100
 
-        self.size = 100   #edit here
+        self.size = 500   #edit here
 
         self.A_r = self.size           #Added rows and column sizes for operands 
         self.A_c = self.size
@@ -277,6 +278,10 @@ class scale_config:
     def get_array_dims(self):
         if self.valid_conf_flag:
             return self.array_rows, self.array_cols
+
+    def get_col_fold(self):
+        if self.valid_conf_flag:
+            return self.col_fold
 
     def get_mem_sizes(self):
         me = 'scale_config.' + 'get_mem_sizes()'
