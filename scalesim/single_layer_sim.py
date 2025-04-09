@@ -8,7 +8,6 @@ from scalesim.compute.systolic_compute_os import systolic_compute_os
 from scalesim.compute.systolic_compute_ws import systolic_compute_ws
 from scalesim.compute.systolic_compute_is import systolic_compute_is
 from compute.systolic_compute_solver import systolic_compute_solver
-from compute.systolic_compute_solver_ns import systolic_compute_solver_ns
 from memory.double_buffered_scratchpad_mem import double_buffered_scratchpad as mem_dbsp
 
 
@@ -21,7 +20,7 @@ class single_layer_sim:
 
         self.op_mat_obj = opmat()
         # self.compute_system = systolic_compute_os()
-        self.compute_system = systolic_compute_solver_ns()
+        self.compute_system = systolic_compute_solver()
         self.memory_system = mem_dbsp()
 
         self.verbose = True
@@ -127,7 +126,7 @@ class single_layer_sim:
                                    solver_obj=self.solver,
                                    )
 
-        self.compute_system = systolic_compute_solver_ns()
+        self.compute_system = systolic_compute_solver()
 
         arr_dims =self.config.get_array_dims()
         self.num_mac_unit = arr_dims[0]
