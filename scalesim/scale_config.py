@@ -69,7 +69,7 @@ class scale_config:
 
         section = 'architecture_presets'
         self.array_rows = 2048
-        self.array_cols = 1
+        self.array_cols = 100       #c  hange this value to change the array size
 
         self.size = 100   #edit here
 

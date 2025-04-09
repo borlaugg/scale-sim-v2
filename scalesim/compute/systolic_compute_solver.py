@@ -72,8 +72,8 @@ class systolic_compute_solver:
 
         self.arr_row, self.arr_col = self.config.get_array_dims()
 
-        self.col_fold = math.ceil(self.Sr / self.arr_row)
-        self.row_fold = self.col_fold
+        self.col_fold = math.ceil(self.Sc / self.arr_col)
+        self.row_fold = math.ceil(self.Sr / self.arr_row)
 
         self.params_set_flag = True
 
@@ -96,9 +96,9 @@ class systolic_compute_solver:
                 row_end_idx = min(row_start_id + self.arr_row, self.Sr)
                 row_delta = self.arr_row - (row_end_idx - row_start_id)
 
-                col_start_id = fc * self.arr_row
-                col_end_idx = min(col_start_id + self.arr_row, self.Sc)
-                col_delta = self.arr_row - (col_end_idx - col_start_id)
+                col_start_id = fc * self.arr_col
+                col_end_idx = min(col_start_id + self.arr_col, self.Sc)
+                col_delta = self.arr_col - (col_end_idx - col_start_id)
 
                 this_fold_prefetch = self.A_op_mat[row_start_id: row_end_idx, col_start_id: col_end_idx]
 
@@ -142,10 +142,10 @@ class systolic_compute_solver:
     def create_xin_prefetch_mat(self):
         assert self.params_set_flag, 'Parameters are not set'
 
-        for fr in range(self.row_fold):
-            row_start_id = fr * self.arr_row
-            row_end_idx = min(row_start_id + self.arr_row, self.Sr)
-            delta = self.arr_row - (row_end_idx - row_start_id)
+        for fr in range(self.col_fold):
+            row_start_id = fr * self.arr_col
+            row_end_idx = min(row_start_id + self.arr_col, self.Sr)
+            delta = self.arr_col - (row_end_idx - row_start_id)
 
             this_fold_prefetch = self.xin_op_mat[row_start_id: row_end_idx]
 
@@ -274,11 +274,11 @@ class systolic_compute_solver:
         #print('DEBUG: create_filter_demand_mat()')
         pbar = tqdm(total=self.col_fold * self.row_fold, disable=True)
 
-        for fc in range(self.col_fold):
-            for fr in range(self.row_fold):
-                row_start_id = fr * self.arr_row
-                row_end_idx = min(row_start_id + self.arr_row, self.Sr)
-                delta = self.arr_row - (row_end_idx - row_start_id)
+        for fc in range(self.row_fold):
+            for fr in range(self.col_fold):
+                row_start_id = fr * self.arr_col
+                row_end_idx = min(row_start_id + self.arr_col, self.Sr)
+                delta = self.arr_col - (row_end_idx - row_start_id)
 
                 this_fold_demand = self.xin_op_mat[row_start_id: row_end_idx]
                 self.xin_reads += this_fold_demand.shape[0] * 1
@@ -319,9 +319,9 @@ class systolic_compute_solver:
                 row_end_idx = min(row_start_id + self.arr_row, self.Sr)
                 row_delta = self.arr_row - (row_end_idx - row_start_id)
 
-                col_start_id = fc * self.arr_row
-                col_end_idx = min(col_start_id + self.arr_row, self.Sc)
-                col_delta = self.arr_row - (col_end_idx - col_start_id)
+                col_start_id = fc * self.arr_col
+                col_end_idx = min(col_start_id + self.arr_col, self.Sc)
+                col_delta = self.arr_col - (col_end_idx - col_start_id)
 
                 this_fold_demand = self.A_op_mat[row_start_id: row_end_idx, col_start_id: col_end_idx]
                 self.A_reads += this_fold_demand.shape[0] * this_fold_demand.shape[1]

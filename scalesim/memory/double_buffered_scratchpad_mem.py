@@ -189,6 +189,7 @@ class double_buffered_scratchpad:
 
         x_lines = x_demand_mat.shape[0]
         PEs = x_demand_mat.shape[1]
+        c = int(A_demand_mat.shape[1]/PEs)
         step = math.sqrt(x_lines)
 
         self.total_cycles = 0
@@ -208,7 +209,7 @@ class double_buffered_scratchpad:
 
             cycle_arr = np.zeros((1,1)) + i + self.stall_cycles
 
-            A_demand_line = np.reshape(A_demand_mat[i],(1,PEs*PEs))
+            A_demand_line = np.reshape(A_demand_mat[i],(1,PEs*c))
             A_cycle_out = self.A_buf.service_reads(incoming_requests_arr_np=A_demand_line,
                                                             incoming_cycles_arr=cycle_arr)
             A_serviced_cycles += [A_cycle_out[0]]
@@ -223,7 +224,7 @@ class double_buffered_scratchpad:
             b_stalls = b_cycle_out[0] - cycle_arr[0] - b_hit_latency
             
 
-            xin_demand_line = np.reshape(xin_demand_mat[i],(1, PEs))
+            xin_demand_line = np.reshape(xin_demand_mat[i],(1, c))
             xin_cycle_out = self.xin_buf.service_reads(incoming_requests_arr_np=xin_demand_line,
                                                         incoming_cycles_arr=cycle_arr)
             xin_serviced_cycles += [xin_cycle_out[0]]
